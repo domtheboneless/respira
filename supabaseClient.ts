@@ -1,24 +1,9 @@
+// Nota: il pacchetto finisce con -js
+import { createClient } from "@supabase/supabase-js";
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Helper to safely get env vars without crashing in browser
-const getEnv = (key: string) => {
-  try {
-    if (typeof process !== 'undefined' && process.env) {
-      return process.env[key];
-    }
-  } catch (e) {
-    // Ignore error
-  }
-  return undefined;
-};
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Use provided credentials or fallback to env vars
-// Note: In a real production app, these should be environment variables.
-const supabaseUrl = getEnv('SUPABASE_URL') || 'https://qrqoezasisfbsnqlvoef.supabase.co';
-const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY') || 'sb_publishable_Udwxh9fPUK2DdY4DzHiAWA_lSvqeM6P';
-
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
-
-// Initialize the client
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
