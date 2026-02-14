@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { UserStats, Language } from "../types";
+import { UserStats, Language, CravingContext } from "../types";
 import { TRANSLATIONS } from "../constants";
 import {
 	LineChart,
@@ -18,6 +18,12 @@ interface Props {
 	stats: UserStats;
 	language: Language;
 	onUpdateStats: (stats: UserStats) => void;
+	// Timer persistente
+	activeCountdown: number | null;
+	onStartTimer: (initialSeconds: number) => void;
+	onStopTimer: () => void;
+	shouldOpenTimerModal: boolean;
+	onTimerModalOpened: () => void;
 }
 
 // Helper to calculate coordinates for radial slider
@@ -34,17 +40,28 @@ const polarToCartesian = (
 	};
 };
 
-const Dashboard: React.FC<Props> = ({ stats, language, onUpdateStats }) => {
+const Dashboard: React.FC<Props> = ({
+	stats,
+	language,
+	onUpdateStats,
+	activeCountdown,
+	onStartTimer,
+	onStopTimer,
+	shouldOpenTimerModal,
+	onTimerModalOpened,
+}) => {
 	const t = TRANSLATIONS[language];
 	const [now, setNow] = useState(new Date());
 
 	// Modals & Craving Flow
 	const [showCravingModal, setShowCravingModal] = useState(false);
-	const [cravingStep, setCravingStep] = useState<"rating" | "low" | "high">(
-		"rating",
+	const [cravingStep, setCravingStep] = useState<
+		"context" | "rating" | "low" | "high"
+	>("context");
+	const [cravingContext, setCravingContext] = useState<CravingContext | null>(
+		null,
 	);
 	const [urgeRating, setUrgeRating] = useState(5);
-	const [countdown, setCountdown] = useState(600); // 10 minutes in seconds
 
 	const [showLapseModal, setShowLapseModal] = useState(false);
 	const [aiPhrase, setAiPhrase] = useState("");
@@ -59,14 +76,18 @@ const Dashboard: React.FC<Props> = ({ stats, language, onUpdateStats }) => {
 		return () => clearInterval(timer);
 	}, []);
 
-	// Countdown logic
+	// Apri il modal quando richiesto dal banner
 	useEffect(() => {
-		let timer: any;
-		if (showCravingModal && cravingStep === "low" && countdown > 0) {
-			timer = setInterval(() => setCountdown(c => c - 1), 1000);
+		if (
+			shouldOpenTimerModal &&
+			activeCountdown !== null &&
+			activeCountdown > 0
+		) {
+			setCravingStep("low");
+			setShowCravingModal(true);
+			onTimerModalOpened();
 		}
-		return () => clearInterval(timer);
-	}, [showCravingModal, cravingStep, countdown]);
+	}, [shouldOpenTimerModal, activeCountdown, onTimerModalOpened]);
 
 	const timeDiff = useMemo(() => {
 		const start = new Date(stats.quitDate);
@@ -95,25 +116,50 @@ const Dashboard: React.FC<Props> = ({ stats, language, onUpdateStats }) => {
 	// --- Logic for Urge Flow ---
 
 	const startCravingFlow = () => {
-		setCravingStep("rating");
+		setCravingStep("context");
+		setCravingContext(null);
 		setUrgeRating(5);
-		setCountdown(600);
 		setShowCravingModal(true);
 		setAiPhrase("");
 	};
 
+	const handleContextSelect = (context: CravingContext) => {
+		setCravingContext(context);
+		setCravingStep("rating");
+	};
+
 	const handleUrgeAnalysis = async () => {
-		setIsLoadingAi(true);
+		if (!cravingContext) return;
+
 		const timeStr = `${timeDiff.d}${t.days} ${timeDiff.h}${t.hours} ${timeDiff.m}${t.minutes}`;
+
+		// Se urgenza è molto bassa (1-3), usa messaggio statico
+		if (urgeRating <= 3) {
+			const staticPhrase =
+				language === "en"
+					? `You've got this! ${timeStr} smoke-free. Just a small bump—you're stronger than this.`
+					: `Ce la puoi fare! ${timeStr} senza fumare. Solo un piccolo ostacolo—sei più forte di così.`;
+
+			setAiPhrase(staticPhrase);
+			onStartTimer(600);
+			setCravingStep("low");
+			return;
+		}
+
+		// Per urgenza >= 4, chiama Gemini CON CONTESTO
+		setIsLoadingAi(true);
 		const phrase = await getMotivationalPhrase(
 			language,
 			stats.dreamGoal,
 			timeStr,
+			urgeRating,
+			cravingContext,
 		);
 		setAiPhrase(phrase);
 		setIsLoadingAi(false);
 
 		if (urgeRating < 6) {
+			onStartTimer(600);
 			setCravingStep("low");
 		} else {
 			setCravingStep("high");
@@ -125,6 +171,7 @@ const Dashboard: React.FC<Props> = ({ stats, language, onUpdateStats }) => {
 			...stats,
 			quitDate: new Date().toISOString(),
 		});
+		onStopTimer();
 		setShowLapseModal(false);
 		setShowCravingModal(false);
 	};
@@ -317,6 +364,65 @@ const Dashboard: React.FC<Props> = ({ stats, language, onUpdateStats }) => {
 							</svg>
 						</button>
 
+						{/* STEP 0: CONTEXT SELECTION */}
+						{cravingStep === "context" && (
+							<div className="flex flex-col items-center justify-center flex-1 animate-fadeIn">
+								<h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">
+									{t.context_modal_title}
+								</h2>
+								<p className="text-gray-500 mb-8 text-center">
+									{t.context_modal_subtitle}
+								</p>
+
+								<div className="grid grid-cols-2 gap-4 w-full">
+									<button
+										onClick={() => handleContextSelect("coffee")}
+										className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border-2 border-amber-200 hover:border-amber-400 transition-all active:scale-95">
+										<span className="text-4xl mb-2">☕</span>
+										<span className="font-bold text-gray-800 text-sm text-center">
+											{t.context_coffee}
+										</span>
+									</button>
+
+									<button
+										onClick={() => handleContextSelect("alcohol")}
+										className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border-2 border-blue-200 hover:border-blue-400 transition-all active:scale-95">
+										<span className="text-4xl mb-2">🍺</span>
+										<span className="font-bold text-gray-800 text-sm text-center">
+											{t.context_alcohol}
+										</span>
+									</button>
+
+									<button
+										onClick={() => handleContextSelect("stress")}
+										className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl border-2 border-red-200 hover:border-red-400 transition-all active:scale-95">
+										<span className="text-4xl mb-2">😡</span>
+										<span className="font-bold text-gray-800 text-sm text-center">
+											{t.context_stress}
+										</span>
+									</button>
+
+									<button
+										onClick={() => handleContextSelect("boredom")}
+										className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-gray-50 to-slate-50 rounded-2xl border-2 border-gray-200 hover:border-gray-400 transition-all active:scale-95">
+										<span className="text-4xl mb-2">😔</span>
+										<span className="font-bold text-gray-800 text-sm text-center">
+											{t.context_boredom}
+										</span>
+									</button>
+
+									<button
+										onClick={() => handleContextSelect("meal")}
+										className="col-span-2 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200 hover:border-green-400 transition-all active:scale-95">
+										<span className="text-4xl mb-2">🍽️</span>
+										<span className="font-bold text-gray-800 text-sm text-center">
+											{t.context_meal}
+										</span>
+									</button>
+								</div>
+							</div>
+						)}
+
 						{/* STEP 1: RATING */}
 						{cravingStep === "rating" && (
 							<div className="flex flex-col items-center justify-center flex-1 animate-fadeIn">
@@ -376,24 +482,9 @@ const Dashboard: React.FC<Props> = ({ stats, language, onUpdateStats }) => {
 						)}
 
 						{/* STEP 2: LOW URGE with Mini-Games */}
-						{cravingStep === "low" && (
+						{cravingStep === "low" && activeCountdown !== null && (
 							<div className="flex flex-col flex-1 animate-fadeIn">
 								<div className="flex-shrink-0">
-									<div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 mx-auto">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											className="h-8 w-8 text-green-600"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke="currentColor">
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-											/>
-										</svg>
-									</div>
 									<h3 className="text-2xl font-bold text-gray-800 mb-2 text-center">
 										{t.urge_low_title}
 									</h3>
@@ -403,15 +494,15 @@ const Dashboard: React.FC<Props> = ({ stats, language, onUpdateStats }) => {
 
 									{/* Countdown Timer */}
 									<div className="text-5xl font-mono font-bold text-indigo-600 mb-4 tracking-widest text-center">
-										{Math.floor(countdown / 60)
+										{Math.floor(activeCountdown / 60)
 											.toString()
 											.padStart(2, "0")}
-										:{(countdown % 60).toString().padStart(2, "0")}
+										:{(activeCountdown % 60).toString().padStart(2, "0")}
 									</div>
 								</div>
 
 								{/* Milestones Component */}
-								<Milestones countdown={countdown} language={language} />
+								<Milestones countdown={activeCountdown} language={language} />
 
 								{/* Mini-Games Component */}
 								<MiniGames language={language} />
@@ -425,8 +516,20 @@ const Dashboard: React.FC<Props> = ({ stats, language, onUpdateStats }) => {
 									</div>
 								)}
 
+								{/* Loading AI */}
+								{isLoadingAi && (
+									<div className="bg-gray-50 p-4 rounded-2xl mb-4 flex items-center justify-center">
+										<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+										<span className="ml-2 text-gray-600">
+											{t.craving_loading}
+										</span>
+									</div>
+								)}
+
 								<button
-									onClick={() => setShowCravingModal(false)}
+									onClick={() => {
+										setShowCravingModal(false);
+									}}
 									className="w-full px-8 py-3 bg-white border-2 border-indigo-100 text-indigo-600 rounded-xl font-bold hover:bg-indigo-50">
 									{t.urge_btn_resisted}
 								</button>
@@ -454,7 +557,7 @@ const Dashboard: React.FC<Props> = ({ stats, language, onUpdateStats }) => {
 								<h3 className="text-2xl font-bold text-gray-800 mb-2">
 									{t.urge_high_title}
 								</h3>
-								<p className="text-gray-600 mb-6">
+								<p className="text-gray-600 mb-4">
 									{t.urge_high_text
 										.replace(
 											"{cost}",
@@ -462,6 +565,25 @@ const Dashboard: React.FC<Props> = ({ stats, language, onUpdateStats }) => {
 										)
 										.replace("{dream}", stats.dreamGoal)}
 								</p>
+
+								{/* AI Phrase - Messaggio FORTE per urgenza alta */}
+								{!isLoadingAi && aiPhrase && (
+									<div className="bg-red-50 p-4 rounded-2xl border-2 border-red-200 mb-4 w-full">
+										<p className="text-red-900 font-bold text-base leading-relaxed">
+											"{aiPhrase}"
+										</p>
+									</div>
+								)}
+
+								{/* Loading AI */}
+								{isLoadingAi && (
+									<div className="bg-gray-50 p-4 rounded-2xl mb-4 w-full flex items-center justify-center">
+										<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+										<span className="ml-2 text-gray-600">
+											{t.craving_loading}
+										</span>
+									</div>
+								)}
 
 								<div className="w-full bg-red-50 p-4 rounded-xl border border-red-100 mb-6">
 									<p className="text-red-700 text-sm font-medium">
