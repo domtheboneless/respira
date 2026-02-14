@@ -1,52 +1,53 @@
-
-import { supabase } from '../supabaseClient';
-import { UserStats } from '../types';
+import { supabase } from "../supabaseClient";
+import { UserStats } from "../types";
 
 export const profileService = {
-  async getProfile(userId: string): Promise<UserStats | null> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
+	// src/services/profileService.ts
 
-    if (error) {
-      // If RLS denies access (403/42501), we should throw to alert the app that setup is needed.
-      // 406 is handled by maybeSingle() internally (returns null if no rows), but if it persists we might see it here.
-      if (error.code === '42501' || error.message.includes('403')) {
-        throw error;
-      }
-      console.warn("Error loading profile:", error.message);
-      return null;
-    }
+	async getProfile(userId: string): Promise<UserStats | null> {
+		try {
+			// Usa .maybeSingle() invece di .single() o .select()
+			// Questo evita l'errore "JSON object requested, multiple (or no) rows returned"
+			const { data, error } = await supabase
+				.from("profiles")
+				.select("*")
+				.eq("id", userId)
+				.maybeSingle();
 
-    if (!data) return null;
+			if (error) {
+				console.error("Errore Database:", error.message);
+				return null;
+			}
 
-    return {
-      quitDate: data.quit_date,
-      cigarettesPerDay: data.cigarettes_per_day,
-      pricePerPack: data.price_per_pack,
-      packSize: data.pack_size,
-      dreamGoal: data.dream_goal,
-      dreamCost: data.dream_cost,
-      currency: data.currency,
-    };
-  },
+			if (!data) return null; // Nessun profilo trovato -> Ritorna null pulito
 
-  async upsertProfile(userId: string, stats: UserStats) {
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: userId,
-        quit_date: stats.quitDate,
-        cigarettes_per_day: stats.cigarettesPerDay,
-        price_per_pack: stats.pricePerPack,
-        pack_size: stats.packSize,
-        dream_goal: stats.dreamGoal,
-        dream_cost: stats.dreamCost,
-        currency: stats.currency,
-      });
+			return {
+				quitDate: data.quit_date, // Assicurati che i nomi corrispondano alle colonne DB
+				cigarettesPerDay: data.cigarettes_per_day,
+				pricePerPack: data.price_per_pack,
+				packSize: data.pack_size,
+				dreamGoal: data.dream_goal,
+				dreamCost: data.dream_cost,
+				currency: data.currency,
+			};
+		} catch (error) {
+			console.error("Errore imprevisto:", error);
+			return null;
+		}
+	},
 
-    if (error) throw error;
-  }
+	async upsertProfile(userId: string, stats: UserStats) {
+		const { error } = await supabase.from("profiles").upsert({
+			id: userId,
+			quit_date: stats.quitDate,
+			cigarettes_per_day: stats.cigarettesPerDay,
+			price_per_pack: stats.pricePerPack,
+			pack_size: stats.packSize,
+			dream_goal: stats.dreamGoal,
+			dream_cost: stats.dreamCost,
+			currency: stats.currency,
+		});
+
+		if (error) throw error;
+	},
 };

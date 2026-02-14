@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Language, UserStats } from "./types";
 import LanguageSelector from "./components/LanguageSelector";
 import Onboarding from "./components/Onboarding";
@@ -8,26 +8,86 @@ import { TRANSLATIONS } from "./constants";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 import { profileService } from "./services/profileService";
 import { Toaster } from "react-hot-toast";
+import ActiveTimerBanner from "./components/ActiveTimerBanner";
 
 const App: React.FC = () => {
+	const [activeCountdown, setActiveCountdown] = useState<number | null>(null);
+	const [shouldOpenTimerModal, setShouldOpenTimerModal] = useState(false);
+
+	const isInitializing = useRef(false);
+
+	// Stati Dati
 	const [language, setLanguage] = useState<Language>("en");
 	const [userId, setUserId] = useState<string | null>(null);
 	const [userStats, setUserStats] = useState<UserStats | null>(null);
 	const [pendingStats, setPendingStats] = useState<UserStats | null>(null);
+
+	// Stati UI
+	const [initialized, setInitialized] = useState(false);
 	const [view, setView] = useState<
 		"landing" | "onboarding" | "auth" | "dashboard"
 	>("landing");
-	const [initialized, setInitialized] = useState(false);
-	const [configError, setConfigError] = useState<string | null>(null);
 
-	// Keep track of current view in a ref to access it inside the auth listener closure
-	const viewRef = useRef(view);
-	useEffect(() => {
-		viewRef.current = view;
-	}, [view]);
+	// Ref per evitare aggiornamenti su componenti smontati (fix crash F5)
+	const isMounted = useRef(true);
 
+	// --- LOGICA COUNTDOWN ---
 	useEffect(() => {
-		// Initial lang check
+		let timer: any;
+		if (activeCountdown !== null && activeCountdown > 0) {
+			timer = setInterval(() => {
+				setActiveCountdown(c => {
+					if (c === null || c <= 1) return null;
+					return c - 1;
+				});
+			}, 1000);
+		}
+		return () => clearInterval(timer);
+	}, [activeCountdown]);
+
+	const handleStartTimer = useCallback(
+		(seconds: number) => setActiveCountdown(seconds),
+		[],
+	);
+	const handleStopTimer = useCallback(() => {
+		setActiveCountdown(null);
+		setShouldOpenTimerModal(false);
+	}, []);
+	const handleOpenTimerModal = useCallback(
+		() => setShouldOpenTimerModal(true),
+		[],
+	);
+	const handleTimerModalOpened = useCallback(
+		() => setShouldOpenTimerModal(false),
+		[],
+	);
+
+	// --- FUNZIONE DI CARICAMENTO DATI (Isolata per stabilità) ---
+	const fetchUserProfile = useCallback(async (uid: string) => {
+		try {
+			const stats = await profileService.getProfile(uid);
+
+			if (!isMounted.current) return; // Se l'utente ha cambiato pagina, fermati.
+
+			if (stats) {
+				setUserStats(stats);
+				setView("dashboard");
+			} else {
+				// Utente loggato ma senza profilo -> Onboarding
+				setUserStats(null);
+				setView("onboarding");
+			}
+		} catch (error) {
+			console.error("Errore fetch profilo:", error);
+			if (isMounted.current) setView("onboarding");
+		}
+	}, []);
+
+	// --- INIZIALIZZAZIONE DELL'APP ---
+	useEffect(() => {
+		isMounted.current = true;
+		isInitializing.current = true; // <- AGGIUNGI
+		// 1. Lingua
 		const savedLang = localStorage.getItem("respira_lang");
 		if (savedLang) setLanguage(savedLang as Language);
 
@@ -36,98 +96,85 @@ const App: React.FC = () => {
 			return;
 		}
 
-		// Initial session check
-		const initAuth = async () => {
+		// 2. Logica di Avvio (Eseguita una volta sola al reload)
+		const initializeSession = async () => {
+			console.log("🔄 Init session starting...");
 			try {
-				const { data } = await supabase.auth.getSession();
-				const session = data?.session;
+				const {
+					data: { session },
+					error,
+				} = await supabase.auth.getSession();
+				console.log("📝 Session result:", { hasSession: !!session, error });
+
+				if (error) throw error;
 
 				if (session?.user) {
+					console.log("✅ User found:", session.user.id);
 					setUserId(session.user.id);
-					try {
-						const stats = await profileService.getProfile(session.user.id);
-						if (stats) {
-							setUserStats(stats);
-							setView("dashboard");
-						}
-						// NOTE: If stats are missing (null), we do NOT redirect to onboarding automatically
-						// as per user request. The user will stay on 'landing' (but logged in)
-						// or if they came via Auth component, Auth handles the error.
-					} catch (e: any) {
-						console.error("Profile load error", e);
-						if (e.code === "42501" || e.message?.includes("403")) {
-							setConfigError(
-								"Database permission error. Please run the SQL setup commands.",
-							);
-						}
-					}
+					console.log("📊 Fetching profile...");
+					await fetchUserProfile(session.user.id);
+					console.log("✅ Profile loaded");
 				}
-			} catch (e: any) {
-				console.error("Auth initialization failed", e);
+			} catch (error) {
+				console.error("❌ Init error:", error);
+				await supabase.auth.signOut();
+				setUserId(null);
+				setView("landing");
+			} finally {
+				console.log("🏁 Setting initialized");
+				if (isMounted.current) {
+					setInitialized(true);
+					isInitializing.current = false; // <- AGGIUNGI
+				}
 			}
-			setInitialized(true);
 		};
+		initializeSession();
 
-		initAuth();
-
-		// Listen for auth changes
+		// 3. Ascoltatore Eventi
 		const {
 			data: { subscription },
 		} = supabase.auth.onAuthStateChange(async (event, session) => {
+			if (!isMounted.current) return;
 			console.log("Auth Event:", event);
+
+			// IGNORA SIGNED_IN durante l'inizializzazione
+			if (event === "SIGNED_IN" && isInitializing.current) {
+				console.log("⏭️ Ignoring SIGNED_IN during init");
+				return;
+			}
 
 			if (event === "SIGNED_IN" && session?.user) {
 				setUserId(session.user.id);
-
-				// Try to load profile
-				try {
-					const stats = await profileService.getProfile(session.user.id);
-					if (stats) {
-						setUserStats(stats);
-						setView("dashboard");
-					}
-					// Similar to initAuth, we do NOT force onboarding redirect here.
-				} catch (e: any) {
-					console.error("Profile load failed", e);
-					if (e.code === "42501" || e.message?.includes("403")) {
-						setConfigError(
-							"Database permission error. Please run the SQL setup commands.",
-						);
-					}
-				}
+				await fetchUserProfile(session.user.id);
+				setInitialized(true);
 			} else if (event === "SIGNED_OUT") {
 				setUserId(null);
 				setUserStats(null);
-
-				// Only force redirect to landing if we were in the dashboard.
-				if (viewRef.current === "dashboard") {
-					setView("landing");
-				}
+				setView("landing");
+				setInitialized(true);
 			}
 		});
 
-		return () => subscription.unsubscribe();
-	}, []);
+		return () => {
+			isMounted.current = false;
+			subscription.unsubscribe();
+		};
+	}, [fetchUserProfile]);
 
+	// --- HANDLERS UI ---
 	const handleLanguageSelect = (lang: Language) => {
 		setLanguage(lang);
 		localStorage.setItem("respira_lang", lang);
 	};
 
 	const handleOnboardingComplete = async (stats: UserStats) => {
-		console.log("Onboarding complete. UserId:", userId);
 		if (userId) {
 			try {
 				await profileService.upsertProfile(userId, stats);
 				setUserStats(stats);
 				setView("dashboard");
-			} catch (e: any) {
-				console.error("Failed to save profile after onboarding", e);
-				if (e.code === "42501" || e.message?.includes("403")) {
-					setConfigError(
-						"Database permission denied. Please ensure you have run the RLS policies in Supabase SQL Editor.",
-					);
-				}
+			} catch (e) {
+				console.error("Errore salvataggio onboarding:", e);
 			}
 		} else {
 			setPendingStats(stats);
@@ -142,140 +189,36 @@ const App: React.FC = () => {
 	};
 
 	const handleLogout = async () => {
-		if (isSupabaseConfigured) {
-			await supabase.auth.signOut();
-			setView("landing");
-		}
+		await supabase.auth.signOut();
+		setView("landing");
+		setUserStats(null);
+		setUserId(null);
 	};
 
 	const handleUpdateStats = async (newStats: UserStats) => {
-		if (!userId || !isSupabaseConfigured) return;
+		if (!userId) return;
 		try {
 			await profileService.upsertProfile(userId, newStats);
 			setUserStats(newStats);
-		} catch (e: any) {
-			console.error("Failed to update profile", e);
-			if (e.code === "42501" || e.message?.includes("403")) {
-				setConfigError("Database permission error. Check RLS policies.");
-			}
+		} catch (e) {
+			console.error(e);
 		}
 	};
 
 	if (!initialized)
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-gray-50">
-				<div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div>
-			</div>
-		);
-
-	// Show setup screen if Supabase is not configured OR if there was a DB permission error
-	if (!isSupabaseConfigured || configError) {
-		return (
-			<div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6 text-center animate-fadeIn">
-				<div className="w-20 h-20 bg-amber-100 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-amber-100">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						className="h-10 w-10 text-amber-600"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor">
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-						/>
-					</svg>
-				</div>
-				<h1 className="text-3xl font-bold text-gray-800 mb-2">
-					{configError ? "Database Setup Issue" : "Setup Required"}
-				</h1>
-
-				{configError && (
-					<div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 max-w-md">
-						<p className="font-bold">Error: {configError}</p>
-						<p className="text-sm mt-1">
-							Row Level Security (RLS) is enabled but policies might be missing.
-						</p>
-					</div>
-				)}
-
-				{!configError && (
-					<p className="text-gray-600 max-w-md mb-8 leading-relaxed">
-						To enable cloud sync and persistence, please set the{" "}
-						<code className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-mono text-sm border border-amber-100">
-							SUPABASE_URL
-						</code>{" "}
-						and{" "}
-						<code className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-mono text-sm border border-amber-100">
-							SUPABASE_ANON_KEY
-						</code>{" "}
-						environment variables.
-					</p>
-				)}
-
-				<div className="bg-white p-8 rounded-3xl shadow-2xl border border-gray-100 text-left w-full max-w-lg">
-					<h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							className="h-5 w-5 text-indigo-500"
-							viewBox="0 0 20 20"
-							fill="currentColor">
-							<path
-								fillRule="evenodd"
-								d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3 1h10v8H5V6z"
-								clipRule="evenodd"
-							/>
-						</svg>
-						Required SQL Schema & Policies
-					</h2>
-					<p className="text-sm text-gray-500 mb-4">
-						Run this in your Supabase SQL Editor to fix permissions:
-					</p>
-					<pre className="text-xs bg-gray-900 p-6 rounded-2xl overflow-x-auto text-indigo-300 font-mono leading-loose shadow-inner select-all">
-						{`-- 1. Create table if not exists
-create table if not exists profiles (
-  id uuid references auth.users not null primary key,
-  quit_date timestamptz,
-  cigarettes_per_day integer,
-  price_per_pack numeric,
-  pack_size integer,
-  dream_goal text,
-  dream_cost numeric,
-  currency text
-);
-
--- 2. Enable RLS
-alter table profiles enable row level security;
-
--- 3. Create Policies (Drop first to avoid conflicts if re-running)
-drop policy if exists "Users can view own profile" on profiles;
-create policy "Users can view own profile" 
-  on profiles for select using (auth.uid() = id);
-
-drop policy if exists "Users can insert own profile" on profiles;
-create policy "Users can insert own profile" 
-  on profiles for insert with check (auth.uid() = id);
-
-drop policy if exists "Users can update own profile" on profiles;
-create policy "Users can update own profile" 
-  on profiles for update using (auth.uid() = id);`}
-					</pre>
-					{configError && (
-						<button
-							onClick={() => window.location.reload()}
-							className="mt-6 w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors">
-							I've run the SQL, Retry
-						</button>
-					)}
+				<div className="flex flex-col items-center gap-4">
+					<div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div>
 				</div>
 			</div>
 		);
-	}
 
 	return (
 		<div className="min-h-screen bg-gray-50 flex flex-col">
 			<Toaster position="top-center" />
+
+			{/* HEADER */}
 			<header className="bg-white border-b border-gray-100 py-4 px-6 flex justify-between items-center sticky top-0 z-40 backdrop-blur-md bg-white/80">
 				<div className="flex items-center gap-2">
 					<div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
@@ -380,15 +323,29 @@ create policy "Users can update own profile"
 						stats={userStats}
 						language={language}
 						onUpdateStats={handleUpdateStats}
+						activeCountdown={activeCountdown}
+						onStartTimer={handleStartTimer}
+						onStopTimer={handleStopTimer}
+						shouldOpenTimerModal={shouldOpenTimerModal}
+						onTimerModalOpened={handleTimerModalOpened}
 					/>
 				)}
 			</main>
 
+			{/* Banner timer attivo */}
+			{view === "dashboard" &&
+				activeCountdown !== null &&
+				activeCountdown > 0 && (
+					<ActiveTimerBanner
+						countdown={activeCountdown}
+						language={language}
+						onReopen={handleOpenTimerModal}
+						onCancel={handleStopTimer}
+					/>
+				)}
+
 			<footer className="py-6 text-center text-gray-400 text-sm">
-				Respira &copy; {new Date().getFullYear()} -{" "}
-				{language === "en"
-					? "Breathe better, live more."
-					: "Respira meglio, vivi di più."}
+				Respira &copy; {new Date().getFullYear()}
 			</footer>
 		</div>
 	);
