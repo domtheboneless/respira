@@ -344,10 +344,8 @@ const Dashboard: React.FC<Props> = ({
 
 			{/* Enhanced Craving Modal */}
 			{showCravingModal && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-					<div className="bg-white rounded-3xl w-full max-w-md p-6 md:p-8 relative shadow-2xl overflow-y-auto max-h-[90vh] flex flex-col">
-						{" "}
-						{/* ✅ MODIFICATO */}
+				<div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
+					<div className="bg-white rounded-t-3xl md:rounded-3xl w-full md:max-w-md p-4 md:p-8 relative shadow-2xl overflow-y-auto max-h-[85vh] md:max-h-[90vh]">
 						<button
 							onClick={() => setShowCravingModal(false)}
 							className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 z-10">
@@ -365,71 +363,73 @@ const Dashboard: React.FC<Props> = ({
 								/>
 							</svg>
 						</button>
+
 						{/* STEP 0: CONTEXT SELECTION */}
 						{cravingStep === "context" && (
-							<div className="flex flex-col items-center justify-center flex-1 animate-fadeIn">
-								<h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">
+							<div className="py-4 animate-fadeIn">
+								<h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-1 text-center">
 									{t.context_modal_title}
 								</h2>
-								<p className="text-gray-500 mb-8 text-center">
+								<p className="text-sm text-gray-500 mb-6 text-center">
 									{t.context_modal_subtitle}
 								</p>
 
-								<div className="grid grid-cols-2 gap-4 w-full">
+								<div className="grid grid-cols-2 gap-3">
 									<button
 										onClick={() => handleContextSelect("coffee")}
-										className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border-2 border-amber-200 hover:border-amber-400 transition-all active:scale-95">
-										<span className="text-4xl mb-2">☕</span>
-										<span className="font-bold text-gray-800 text-sm text-center">
+										className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-200 hover:border-amber-400 transition-all active:scale-95">
+										<span className="text-3xl mb-1">☕</span>
+										<span className="font-bold text-gray-800 text-xs text-center">
 											{t.context_coffee}
 										</span>
 									</button>
 
 									<button
 										onClick={() => handleContextSelect("alcohol")}
-										className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border-2 border-blue-200 hover:border-blue-400 transition-all active:scale-95">
-										<span className="text-4xl mb-2">🍺</span>
-										<span className="font-bold text-gray-800 text-sm text-center">
+										className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 hover:border-blue-400 transition-all active:scale-95">
+										<span className="text-3xl mb-1">🍺</span>
+										<span className="font-bold text-gray-800 text-xs text-center">
 											{t.context_alcohol}
 										</span>
 									</button>
 
 									<button
 										onClick={() => handleContextSelect("stress")}
-										className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl border-2 border-red-200 hover:border-red-400 transition-all active:scale-95">
-										<span className="text-4xl mb-2">😡</span>
-										<span className="font-bold text-gray-800 text-sm text-center">
+										className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-red-50 to-pink-50 rounded-xl border-2 border-red-200 hover:border-red-400 transition-all active:scale-95">
+										<span className="text-3xl mb-1">😡</span>
+										<span className="font-bold text-gray-800 text-xs text-center">
 											{t.context_stress}
 										</span>
 									</button>
 
 									<button
 										onClick={() => handleContextSelect("boredom")}
-										className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-gray-50 to-slate-50 rounded-2xl border-2 border-gray-200 hover:border-gray-400 transition-all active:scale-95">
-										<span className="text-4xl mb-2">😔</span>
-										<span className="font-bold text-gray-800 text-sm text-center">
+										className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl border-2 border-gray-200 hover:border-gray-400 transition-all active:scale-95">
+										<span className="text-3xl mb-1">😔</span>
+										<span className="font-bold text-gray-800 text-xs text-center">
 											{t.context_boredom}
 										</span>
 									</button>
 
 									<button
 										onClick={() => handleContextSelect("meal")}
-										className="col-span-2 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200 hover:border-green-400 transition-all active:scale-95">
-										<span className="text-4xl mb-2">🍽️</span>
-										<span className="font-bold text-gray-800 text-sm text-center">
+										className="col-span-2 flex flex-col items-center justify-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 hover:border-green-400 transition-all active:scale-95">
+										<span className="text-3xl mb-1">🍽️</span>
+										<span className="font-bold text-gray-800 text-xs text-center">
 											{t.context_meal}
 										</span>
 									</button>
 								</div>
 							</div>
 						)}
+
 						{/* STEP 1: RATING */}
 						{cravingStep === "rating" && (
-							<div className="flex flex-col items-center justify-center flex-1 animate-fadeIn">
-								<h2 className="text-2xl font-bold text-gray-800 mb-6">
+							<div className="py-4 animate-fadeIn">
+								<h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 text-center">
 									{t.urge_modal_title}
 								</h2>
-								<div className="relative w-64 h-64 mb-6">
+								<div className="relative w-48 h-48 md:w-64 md:h-64 mb-4 mx-auto">
 									<svg
 										ref={svgRef}
 										className="w-full h-full touch-none cursor-pointer"
@@ -468,91 +468,83 @@ const Dashboard: React.FC<Props> = ({
 											{urgeRating}
 										</text>
 									</svg>
-									<p className="text-center text-gray-400 text-sm mt-2">
+									<p className="text-center text-gray-400 text-xs mt-2">
 										{t.urge_rating_label}
 									</p>
 								</div>
 								<button
 									onClick={handleUrgeAnalysis}
 									disabled={isLoadingAi}
-									className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-colors shadow-lg disabled:opacity-70">
+									className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-base hover:bg-indigo-700 transition-colors shadow-lg disabled:opacity-70">
 									{isLoadingAi ? t.craving_loading : t.urge_btn_analyze}
 								</button>
 							</div>
 						)}
+
 						{/* STEP 2: LOW URGE with Mini-Games */}
 						{cravingStep === "low" && activeCountdown !== null && (
-							<div className="flex flex-col flex-1 animate-fadeIn overflow-y-auto">
-								{" "}
-								{/* ✅ AGGIUNTO overflow-y-auto */}
-								<div className="flex-shrink-0">
-									<h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-1 text-center">
-										{" "}
-										{/* ✅ Testo più piccolo su mobile */}
-										{t.urge_low_title}
-									</h3>
-									<p className="text-sm md:text-base text-gray-600 mb-3 text-center">
-										{" "}
-										{/* ✅ Testo più piccolo */}
-										{t.urge_low_text}
-									</p>
+							<div className="py-2 animate-fadeIn space-y-3">
+								<h3 className="text-lg md:text-xl font-bold text-gray-800 text-center">
+									{t.urge_low_title}
+								</h3>
+								<p className="text-sm text-gray-600 text-center">
+									{t.urge_low_text}
+								</p>
 
-									{/* Countdown Timer */}
-									<div className="text-4xl md:text-5xl font-mono font-bold text-indigo-600 mb-3 tracking-widest text-center">
-										{" "}
-										{/* ✅ Più piccolo su mobile */}
-										{Math.floor(activeCountdown / 60)
-											.toString()
-											.padStart(2, "0")}
-										:{(activeCountdown % 60).toString().padStart(2, "0")}
-									</div>
+								{/* Countdown Timer */}
+								<div className="text-3xl md:text-4xl font-mono font-bold text-indigo-600 tracking-widest text-center">
+									{Math.floor(activeCountdown / 60)
+										.toString()
+										.padStart(2, "0")}
+									:{(activeCountdown % 60).toString().padStart(2, "0")}
 								</div>
-								{/* Milestones Component - NASCONDI SU MOBILE */}
+
+								{/* Milestones Component - SOLO DESKTOP */}
 								<div className="hidden md:block">
-									{" "}
-									{/* ✅ SOLO SU DESKTOP */}
 									<Milestones countdown={activeCountdown} language={language} />
 								</div>
+
 								{/* Mini-Games Component */}
-								<MiniGames language={language} />
+								<div className="py-2">
+									<MiniGames language={language} />
+								</div>
+
 								{/* AI Phrase */}
 								{!isLoadingAi && aiPhrase && (
-									<div className="bg-indigo-50 p-3 md:p-4 rounded-2xl border border-indigo-100 mb-3 md:mb-4">
-										{" "}
-										{/* ✅ Padding ridotto */}
-										<p className="text-indigo-900 italic text-xs md:text-sm text-center leading-relaxed">
-											{" "}
-											{/* ✅ Testo più piccolo */}"{aiPhrase}"
+									<div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100">
+										<p className="text-indigo-900 italic text-xs leading-relaxed text-center">
+											💬 "{aiPhrase}"
 										</p>
 									</div>
 								)}
+
 								{/* Loading AI */}
 								{isLoadingAi && (
-									<div className="bg-gray-50 p-3 md:p-4 rounded-2xl mb-3 md:mb-4 flex items-center justify-center">
-										<div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-indigo-600"></div>
-										<span className="ml-2 text-sm md:text-base text-gray-600">
+									<div className="bg-gray-50 p-3 rounded-xl flex items-center justify-center">
+										<div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
+										<span className="ml-2 text-sm text-gray-600">
 											{t.craving_loading}
 										</span>
 									</div>
 								)}
+
 								<button
 									onClick={() => {
 										setShowCravingModal(false);
 									}}
-									className="w-full px-6 md:px-8 py-3 bg-white border-2 border-indigo-100 text-indigo-600 rounded-xl font-bold hover:bg-indigo-50 text-sm md:text-base">
-									{" "}
-									{/* ✅ Testo responsive */}
+									className="w-full px-6 py-3 bg-white border-2 border-indigo-100 text-indigo-600 rounded-xl font-bold hover:bg-indigo-50 text-sm">
 									{t.urge_btn_resisted}
 								</button>
 							</div>
 						)}
+
 						{/* STEP 3: HIGH URGE */}
 						{cravingStep === "high" && (
-							<div className="flex flex-col items-center justify-center flex-1 animate-fadeIn text-center">
-								<div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 animate-pulse">
+							<div className="py-4 animate-fadeIn text-center space-y-3">
+								<div className="w-12 h-12 md:w-16 md:h-16 bg-red-100 rounded-full flex items-center justify-center mb-2 animate-pulse mx-auto">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
-										className="h-8 w-8 text-red-600"
+										className="h-6 w-6 md:h-8 md:w-8 text-red-600"
 										fill="none"
 										viewBox="0 0 24 24"
 										stroke="currentColor">
@@ -564,10 +556,10 @@ const Dashboard: React.FC<Props> = ({
 										/>
 									</svg>
 								</div>
-								<h3 className="text-2xl font-bold text-gray-800 mb-2">
+								<h3 className="text-xl md:text-2xl font-bold text-gray-800">
 									{t.urge_high_title}
 								</h3>
-								<p className="text-gray-600 mb-4">
+								<p className="text-sm text-gray-600">
 									{t.urge_high_text
 										.replace(
 											"{cost}",
@@ -576,26 +568,26 @@ const Dashboard: React.FC<Props> = ({
 										.replace("{dream}", stats.dreamGoal)}
 								</p>
 
-								{/* AI Phrase - Messaggio FORTE per urgenza alta */}
+								{/* AI Phrase */}
 								{!isLoadingAi && aiPhrase && (
-									<div className="bg-red-50 p-4 rounded-2xl border-2 border-red-200 mb-4 w-full">
-										<p className="text-red-900 font-bold text-base leading-relaxed">
-											"{aiPhrase}"
+									<div className="bg-red-50 p-3 rounded-xl border-2 border-red-200">
+										<p className="text-red-900 font-bold text-sm leading-relaxed">
+											⚠️ "{aiPhrase}"
 										</p>
 									</div>
 								)}
 
 								{/* Loading AI */}
 								{isLoadingAi && (
-									<div className="bg-gray-50 p-4 rounded-2xl mb-4 w-full flex items-center justify-center">
-										<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-										<span className="ml-2 text-gray-600">
+									<div className="bg-gray-50 p-3 rounded-xl flex items-center justify-center">
+										<div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
+										<span className="ml-2 text-sm text-gray-600">
 											{t.craving_loading}
 										</span>
 									</div>
 								)}
 
-								<div className="w-full bg-red-50 p-4 rounded-xl border border-red-100 mb-6">
+								<div className="bg-red-50 p-3 rounded-xl border border-red-100">
 									<p className="text-red-700 text-sm font-medium">
 										-{stats.currency}
 										{costPerCig.toFixed(2)}{" "}
@@ -605,15 +597,15 @@ const Dashboard: React.FC<Props> = ({
 									</p>
 								</div>
 
-								<div className="flex flex-col gap-3 w-full">
+								<div className="flex flex-col gap-2 pt-2">
 									<button
 										onClick={() => setShowCravingModal(false)}
-										className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-indigo-700 shadow-lg">
+										className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-base hover:bg-indigo-700 shadow-lg">
 										{t.urge_btn_resisted}
 									</button>
 									<button
 										onClick={handleLapseConfirm}
-										className="w-full py-4 bg-white border border-gray-200 text-gray-500 rounded-2xl font-medium text-lg hover:bg-gray-50 hover:text-red-500">
+										className="w-full py-3 bg-white border border-gray-200 text-gray-500 rounded-xl font-medium text-base hover:bg-gray-50 hover:text-red-500">
 										{t.urge_btn_smoked}
 									</button>
 								</div>
