@@ -345,7 +345,7 @@ const App: React.FC = () => {
 				)}
 
 			<footer className="py-6 text-center text-gray-400 text-sm">
-				Respira &copy; {new Date().getFullYear()}
+				Respiraxxx &copy; {new Date().getFullYear()}
 			</footer>
 		</div>
 	);
