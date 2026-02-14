@@ -1148,42 +1148,47 @@ const QuizGame: React.FC<Props> = ({ language }) => {
 
 	return (
 		<div className="animate-fadeIn">
-			<div className="bg-gradient-to-b from-purple-50 to-indigo-50 p-6 rounded-2xl">
-				<div className="flex justify-between items-center mb-4">
-					<h4 className="text-lg font-bold text-indigo-900">
+			<div className="bg-gradient-to-b from-purple-50 to-indigo-50 p-4 md:p-6 rounded-2xl">
+				{" "}
+				{/* ✅ Padding ridotto */}
+				<div className="flex justify-between items-center mb-3 md:mb-4">
+					<h4 className="text-base md:text-lg font-bold text-indigo-900">
+						{" "}
+						{/* ✅ Testo più piccolo */}
 						🧠 {language === "en" ? "Quiz Challenge" : "Quiz Challenge"}
 					</h4>
-					<div className="bg-white px-4 py-2 rounded-full shadow-sm">
-						<span className="text-sm font-bold text-indigo-600">
+					<div className="bg-white px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-sm">
+						<span className="text-xs md:text-sm font-bold text-indigo-600">
 							{language === "en" ? `Score: ${score}` : `Punteggio: ${score}`}
 						</span>
 					</div>
 				</div>
-
-				<div className="bg-white p-4 rounded-xl mb-4 shadow-sm">
-					<p className="font-bold text-gray-800 text-center text-base">
+				<div className="bg-white p-3 md:p-4 rounded-xl mb-3 md:mb-4 shadow-sm">
+					<p className="font-bold text-gray-800 text-center text-sm md:text-base">
+						{" "}
+						{/* ✅ Testo più piccolo */}
 						{question.q}
 					</p>
 				</div>
-
-				<div className="grid grid-cols-2 gap-3">
+				<div className="grid grid-cols-2 gap-2 md:gap-3">
 					{question.opts.map((opt, i) => (
 						<button
 							key={i}
 							onClick={() => handleAnswer(i)}
 							disabled={answered}
-							className={getButtonClass(i)}>
-							<span className="font-bold text-indigo-600 mr-2">
+							className={`${getButtonClass(i)} py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm`}>
+							{" "}
+							{/* ✅ Padding e testo ridotti */}
+							<span className="font-bold text-indigo-600 mr-1 md:mr-2">
 								{String.fromCharCode(65 + i)}:
 							</span>
 							{opt}
 						</button>
 					))}
 				</div>
-
 				{showResult && (
 					<div
-						className={`mt-4 p-3 rounded-xl text-center font-bold animate-fadeIn ${
+						className={`mt-3 md:mt-4 p-2 md:p-3 rounded-xl text-center font-bold animate-fadeIn text-sm md:text-base ${
 							selectedAnswer === question.correct
 								? "bg-green-100 text-green-700"
 								: "bg-red-100 text-red-700"

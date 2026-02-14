@@ -345,10 +345,12 @@ const Dashboard: React.FC<Props> = ({
 			{/* Enhanced Craving Modal */}
 			{showCravingModal && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-					<div className="bg-white rounded-3xl max-w-md w-full p-8 relative shadow-2xl overflow-hidden flex flex-col min-h-[500px]">
+					<div className="bg-white rounded-3xl w-full max-w-md p-6 md:p-8 relative shadow-2xl overflow-y-auto max-h-[90vh] flex flex-col">
+						{" "}
+						{/* ✅ MODIFICATO */}
 						<button
 							onClick={() => setShowCravingModal(false)}
-							className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">
+							className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 z-10">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								className="h-6 w-6"
@@ -363,7 +365,6 @@ const Dashboard: React.FC<Props> = ({
 								/>
 							</svg>
 						</button>
-
 						{/* STEP 0: CONTEXT SELECTION */}
 						{cravingStep === "context" && (
 							<div className="flex flex-col items-center justify-center flex-1 animate-fadeIn">
@@ -422,7 +423,6 @@ const Dashboard: React.FC<Props> = ({
 								</div>
 							</div>
 						)}
-
 						{/* STEP 1: RATING */}
 						{cravingStep === "rating" && (
 							<div className="flex flex-col items-center justify-center flex-1 animate-fadeIn">
@@ -480,62 +480,72 @@ const Dashboard: React.FC<Props> = ({
 								</button>
 							</div>
 						)}
-
 						{/* STEP 2: LOW URGE with Mini-Games */}
 						{cravingStep === "low" && activeCountdown !== null && (
-							<div className="flex flex-col flex-1 animate-fadeIn">
+							<div className="flex flex-col flex-1 animate-fadeIn overflow-y-auto">
+								{" "}
+								{/* ✅ AGGIUNTO overflow-y-auto */}
 								<div className="flex-shrink-0">
-									<h3 className="text-2xl font-bold text-gray-800 mb-2 text-center">
+									<h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-1 text-center">
+										{" "}
+										{/* ✅ Testo più piccolo su mobile */}
 										{t.urge_low_title}
 									</h3>
-									<p className="text-gray-600 mb-4 text-center">
+									<p className="text-sm md:text-base text-gray-600 mb-3 text-center">
+										{" "}
+										{/* ✅ Testo più piccolo */}
 										{t.urge_low_text}
 									</p>
 
 									{/* Countdown Timer */}
-									<div className="text-5xl font-mono font-bold text-indigo-600 mb-4 tracking-widest text-center">
+									<div className="text-4xl md:text-5xl font-mono font-bold text-indigo-600 mb-3 tracking-widest text-center">
+										{" "}
+										{/* ✅ Più piccolo su mobile */}
 										{Math.floor(activeCountdown / 60)
 											.toString()
 											.padStart(2, "0")}
 										:{(activeCountdown % 60).toString().padStart(2, "0")}
 									</div>
 								</div>
-
-								{/* Milestones Component */}
-								<Milestones countdown={activeCountdown} language={language} />
-
+								{/* Milestones Component - NASCONDI SU MOBILE */}
+								<div className="hidden md:block">
+									{" "}
+									{/* ✅ SOLO SU DESKTOP */}
+									<Milestones countdown={activeCountdown} language={language} />
+								</div>
 								{/* Mini-Games Component */}
 								<MiniGames language={language} />
-
 								{/* AI Phrase */}
 								{!isLoadingAi && aiPhrase && (
-									<div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 mb-4">
-										<p className="text-indigo-900 italic text-sm text-center">
-											"{aiPhrase}"
+									<div className="bg-indigo-50 p-3 md:p-4 rounded-2xl border border-indigo-100 mb-3 md:mb-4">
+										{" "}
+										{/* ✅ Padding ridotto */}
+										<p className="text-indigo-900 italic text-xs md:text-sm text-center leading-relaxed">
+											{" "}
+											{/* ✅ Testo più piccolo */}"{aiPhrase}"
 										</p>
 									</div>
 								)}
-
 								{/* Loading AI */}
 								{isLoadingAi && (
-									<div className="bg-gray-50 p-4 rounded-2xl mb-4 flex items-center justify-center">
-										<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-										<span className="ml-2 text-gray-600">
+									<div className="bg-gray-50 p-3 md:p-4 rounded-2xl mb-3 md:mb-4 flex items-center justify-center">
+										<div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-indigo-600"></div>
+										<span className="ml-2 text-sm md:text-base text-gray-600">
 											{t.craving_loading}
 										</span>
 									</div>
 								)}
-
 								<button
 									onClick={() => {
 										setShowCravingModal(false);
 									}}
-									className="w-full px-8 py-3 bg-white border-2 border-indigo-100 text-indigo-600 rounded-xl font-bold hover:bg-indigo-50">
+									className="w-full px-6 md:px-8 py-3 bg-white border-2 border-indigo-100 text-indigo-600 rounded-xl font-bold hover:bg-indigo-50 text-sm md:text-base">
+									{" "}
+									{/* ✅ Testo responsive */}
 									{t.urge_btn_resisted}
 								</button>
 							</div>
 						)}
-
 						{/* STEP 3: HIGH URGE */}
 						{cravingStep === "high" && (
 							<div className="flex flex-col items-center justify-center flex-1 animate-fadeIn text-center">
